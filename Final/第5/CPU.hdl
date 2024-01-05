@@ -1,0 +1,44 @@
+CHIP CPU {
+
+    IN  inM[16],         
+        instruction[16], 
+        reset;           
+                         
+                         
+
+    OUT outM[16],        
+        writeM,          
+        addressM[15],   
+        pc[15];          
+
+    PARTS:
+    
+    Mux16(a=instruction, b=ALUoutput, sel=instruction[15], out=registerAinput);
+    
+    Not(in=instruction[15], out=isAregister);
+    Or(a=isAregister,b=instruction[5], out=loadRegisterA);
+
+    ARegister(in=registerAinput, load=loadRegisterA, out=registerAoutput, out[0..14]=addressM);
+
+    Mux16(a=registerAoutput, b=inM, sel=instruction[12], out=ALUregisterAinput);
+
+    And(a=instruction[4], b=instruction[15], out=loadToD);
+    DRegister(in=ALUoutput, load=loadToD, out=registerDoutput);
+
+    ALU(x=registerDoutput, y=ALUregisterAinput, zx=instruction[11] ,nx=instruction[10] ,zy=instruction[9] ,ny=instruction[8] ,f=instruction[7] ,no=instruction[6], out=outM, out=ALUoutput, zr=ALUzrout ,ng=ALUngout);
+
+    And(a=instruction[3], b=instruction[15], out=writeM);
+
+    Not(in=ALUzrout, out=notZero);
+    Not(in=ALUngout, out=notNegative);
+    And(a=notZero, b=notNegative, out=greaterThanZero);
+    And(a=instruction[0], b=greaterThanZero, out=jumpGreaterThanZero);
+    And(a=instruction[1], b=ALUzrout, out=jumpEqualToZero);
+    And(a=instruction[2], b=ALUngout, out=jumpLessThanZero);
+    Or(a=jumpGreaterThanZero, b=jumpEqualToZero, out=jumpGreaterThanOrEqualToZero);
+    Or(a=jumpGreaterThanOrEqualToZero, b=jumpLessThanZero, out=jumpConditions);
+    And(a=jumpConditions, b=instruction[15], out=shouldJump);
+    Not(in=shouldJump, out=shouldNotJump);
+
+    PC(in=registerAoutput, load=shouldJump, inc=shouldNotJump, reset=reset, out[0..14]=pc);
+}

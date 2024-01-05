@@ -1,0 +1,19 @@
+CHIP PC {
+    IN in[16],load,inc,reset;
+    OUT out[16];
+
+    PARTS:
+    Or(a=reset, b=load, out=resetOrLoad);
+    Or(a=resetOrLoad, b=inc, out=resetOrLoadOrInc);
+
+    // Use last condition first so if statements
+    // cascade properly (precedence)
+
+    Inc16(in=prevOut, out=cIn);
+    Mux16(a=in, b=cIn, sel=inc, out=firstInput);
+    Mux16(a=firstInput, b=in, sel=load, out=secondInput);
+    Mux16(a=secondInput, b=false, sel=reset, out=finalInput);
+
+    Register(in=finalInput, load=resetOrLoadOrInc, out=prevOut);
+    Register(in=finalInput, load=resetOrLoadOrInc, out=out);
+}
